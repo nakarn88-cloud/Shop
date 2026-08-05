@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tanabibi — เชื่อมต่อ API จริง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#07080c; --bg-panel:#12151d; --bg-card:#161a24; --line:#232838;
+    --gold:#f4b93c; --gold-dim:#7a5f22; --gold-bright:#ffd873; --gold-deep:#b8790f;
+    --violet:#8b6bf0; --violet-dim:#4a3d8f; --violet-soft:#c9bdf7;
+    --text:#e9e8e4; --text-dim:#8b909e; --text-faint:#565c6b; --danger:#e0574f; --ok:#4fd18b;
+    --shadow-lg:0 24px 48px -20px rgba(0,0,0,0.65);
+    --shadow-gold: 0 10px 26px -10px rgba(244,185,60,0.35);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  *:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; border-radius:4px; }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+  html{ scrollbar-color: var(--gold-dim) var(--bg); }
+  ::selection{ background:rgba(244,185,60,0.28); color:var(--gold-bright); }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:var(--bg-panel); border:2px solid var(--bg); border-radius:8px; }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--gold-dim); }
+  body{
+    background:
+      radial-gradient(1200px 620px at 88% -12%, rgba(139,107,240,0.13), transparent 60%),
+      radial-gradient(900px 520px at -8% 18%, rgba(244,185,60,0.08), transparent 55%),
+      radial-gradient(1000px 700px at 50% 110%, rgba(139,107,240,0.06), transparent 60%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--text); font-family:'Noto Sans Thai','Kanit',sans-serif; min-height:100vh;
+    letter-spacing:.1px;
+  }
+  #app{ animation:viewFade .32s cubic-bezier(.2,.7,.3,1); }
+  @keyframes viewFade{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+  h1,h2,h3,.display{ font-family:'Kanit','Noto Sans Thai',sans-serif; letter-spacing:.1px; }
+  a{ color:inherit; text-decoration:none; cursor:pointer; }
+  button{ font-family:inherit; cursor:pointer; }
+  input,select,textarea{ font-family:inherit; }
+
+  header{ position:sticky; top:0; z-index:40; background:rgba(7,8,12,0.86); backdrop-filter:blur(14px) saturate(140%); border-bottom:1px solid var(--line); }
+  .header-inner{ max-width:1280px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .logo{ display:flex; align-items:center; gap:11px; font-weight:800; font-size:19px; font-family:'Kanit'; letter-spacing:.2px; }
+  .logo .mark{ position:relative; width:30px; height:30px; border-radius:7px;
+    background:
+      radial-gradient(circle at 50% 50%, #5b8dff 0%, #2f5fd6 32%, transparent 58%),
+      linear-gradient(145deg,var(--gold-bright),var(--gold) 45%,var(--gold-deep));
+    clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    box-shadow:0 4px 14px -4px rgba(244,185,60,0.55); }
+  .logo .mark::after{ content:''; position:absolute; inset:0; clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    background:linear-gradient(115deg, rgba(255,255,255,0.55) 0%, transparent 28%, transparent 100%); }
+  nav{ display:flex; gap:22px; font-size:13.5px; color:var(--text-dim); }
+  nav a{ position:relative; padding:4px 0; transition:color .15s; }
+  nav a:hover, nav a.active{ color:var(--gold); }
+  nav a.active::after{ content:''; position:absolute; left:0; right:0; bottom:-17px; height:2px; background:linear-gradient(90deg,var(--gold),transparent); }
+  .header-actions{ display:flex; align-items:center; gap:10px; margin-left:auto; }
+  .pill-btn{ background:var(--bg-panel); border:1px solid var(--line); padding:8px 14px; border-radius:8px; font-size:13px; color:var(--text-dim); transition:color .15s, border-color .15s, transform .15s, background .15s; }
+  .pill-btn:hover{ color:var(--text); border-color:var(--gold-dim); background:#171b26; transform:translateY(-1px); }
+  .pill-btn.gold{ background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1a1200; border:none; font-weight:700; box-shadow:var(--shadow-gold); }
+  .pill-btn.gold:hover{ background:linear-gradient(135deg,var(--gold-bright),var(--gold-bright)); }
+  .wallet-chip{ display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(244,185,60,.10), rgba(139,107,240,.06)); border:1px solid var(--gold-dim);
+    padding:7px 13px; border-radius:8px; font-size:12.5px; }
+  .wallet-chip b{ color:var(--gold); font-family:'Kanit'; letter-spacing:.2px; }
+
+  .conn-dot{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-dim); }
+  .conn-dot .dot{ width:8px; height:8px; border-radius:50%; background:var(--text-faint); transition:background .2s, box-shadow .2s; }
+  .conn-dot .dot.on{ background:var(--ok); box-shadow:0 0 8px var(--ok); }
+  .conn-dot .dot.off{ background:var(--danger); box-shadow:0 0 8px var(--danger); }
+
+  .toast{ position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-6px); z-index:100;
+    background:var(--bg-card); border:1px solid var(--gold-dim); padding:11px 20px; border-radius:10px;
+    font-size:13px; box-shadow:var(--shadow-lg); opacity:0; transition:opacity .25s ease, transform .25s ease; pointer-events:none; max-width:88vw; text-align:center; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.err{ border-color:var(--danger); color:#ffb4af; }
+  .toast.ok{ border-color:var(--ok); color:#b6f5d3; }
+
+  main{ max-width:1280px; margin:0 auto; padding:22px 24px 60px; }
+  .breadcrumb{ font-size:12.5px; color:var(--text-dim); margin-bottom:14px; }
+  .breadcrumb .cur{ color:var(--gold); }
+
+  .hero-band{ position:relative; overflow:hidden; border:1px solid var(--line); border-radius:16px; padding:26px 30px; margin-bottom:24px;
+    background:linear-gradient(120deg, rgba(244,185,60,0.10), rgba(139,107,240,0.06) 55%, transparent);
+    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap; }
+  .hero-band::before{ content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+    background:repeating-linear-gradient(115deg, rgba(244,185,60,0.05) 0 2px, transparent 2px 42px); }
+  .hero-band::after{ content:''; position:absolute; top:-60%; right:-8%; width:260px; height:260px; pointer-events:none;
+    background:radial-gradient(circle, rgba(139,107,240,0.22), transparent 70%); }
+  .hero-band > *{ position:relative; z-index:1; }
+  .hero-band h1{ font-size:25px; font-weight:700; letter-spacing:.1px; }
+  .hero-band .sub{ color:var(--text-dim); font-size:13.5px; margin-top:6px; }
+
+  .layout{ display:grid; grid-template-columns:230px 1fr; gap:26px; }
+  aside{ display:flex; flex-direction:column; gap:18px; }
+  .panel{ background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .panel h3{ font-size:12.5px; color:var(--text-dim); font-weight:600; margin-bottom:12px; letter-spacing:.6px; text-transform:uppercase; }
+  .cat-list{ display:flex; flex-direction:column; gap:2px; }
+  .cat-list a{ padding:9px 10px; border-radius:7px; font-size:13.5px; color:var(--text-dim); display:flex; justify-content:space-between; transition:background .15s, color .15s; }
+  .cat-list a:hover{ background:#1b2029; color:var(--text); }
+  .cat-list a.active{ background:rgba(244,185,60,0.10); color:var(--gold); font-weight:600; border:1px solid rgba(244,185,60,0.25); }
+  .cat-list a .n{ font-size:11px; color:var(--text-faint); }
+
+  .grid-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;}
+  .grid-head h2{ font-size:18.5px; font-weight:700; }
+  .grid-head .count{ color:var(--text-dim); font-size:12.5px; font-weight:400; }
+
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:17px; }
+  .card{ position:relative; background:var(--bg-card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    display:flex; flex-direction:column; transition:border-color .22s, transform .22s ease, box-shadow .22s ease; }
+  .card:hover{ border-color:var(--gold-dim); transform:translateY(-4px); box-shadow:var(--shadow-lg), 0 0 0 1px rgba(244,185,60,0.10); }
+  .thumb{ position:relative; aspect-ratio:16/10; overflow:hidden;
+    background:radial-gradient(circle at 30% 20%, rgba(139,107,240,0.35), transparent 60%), linear-gradient(135deg,#1c2130,#0e1119);
+    display:flex; align-items:center; justify-content:center; }
+  .thumb::before{ content:''; position:absolute; inset:0;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 18px); }
+  .thumb::after{ content:''; position:absolute; top:0; left:-60%; width:40%; height:100%;
+    background:linear-gradient(115deg, transparent, rgba(255,255,255,0.10), transparent);
+    transform:skewX(-18deg); transition:left .55s ease; }
+  .card:hover .thumb::after{ left:130%; }
+  .thumb .icon{ width:52px; height:52px; clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    background:linear-gradient(145deg,var(--gold-bright),var(--gold) 45%,var(--gold-deep)); opacity:.92; transition:transform .35s ease;
+    box-shadow:0 6px 18px -6px rgba(244,185,60,0.5); }
+  .card:hover .thumb .icon{ transform:scale(1.1) rotate(6deg); }
+  .thumb .prod-img{ position:relative; z-index:1; width:100%; height:100%; object-fit:cover; }
+  .tag{ position:absolute; top:9px; left:9px; background:rgba(244,185,60,.15); border:1px solid rgba(244,185,60,.4);
+    color:var(--gold); font-size:10.5px; font-weight:600; padding:3px 8px; border-radius:5px; backdrop-filter:blur(4px); }
+  .tag.sold{ background:rgba(224,87,79,.15); border-color:rgba(224,87,79,.4); color:var(--danger); }
+  .stock-flag{ position:absolute; bottom:9px; right:9px; font-size:10.5px; color:var(--text-dim); background:rgba(0,0,0,.55); padding:3px 7px; border-radius:5px; }
+  .card-body{ padding:13px 14px 15px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .card-title{ font-size:13.5px; font-weight:600; line-height:1.4; }
+  .spec-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .spec{ font-size:10.5px; color:var(--text-dim); background:#1c212c; border:1px solid var(--line); padding:2px 7px; border-radius:5px; }
+  .price-row{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; padding-top:9px; border-top:1px dashed var(--line); }
+  .price{ font-family:'Kanit'; font-weight:700; font-size:17.5px; color:var(--gold); }
+  .price .unit{ font-size:11px; color:var(--text-dim); font-weight:400; margin-left:3px; }
+  .buy-btn{ position:relative; overflow:hidden; background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1a1200; font-weight:700; font-size:12px; padding:7px 14px; border-radius:8px; border:none; transition:transform .15s, box-shadow .15s; }
+  .buy-btn:hover{ transform:translateY(-1px); box-shadow:0 6px 16px -6px rgba(244,185,60,0.6); }
+  .buy-btn.disabled{ background:#2a2e38; color:#5c6270; cursor:not-allowed; transform:none; box-shadow:none; }
+
+  .form-card{ position:relative; background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:30px; max-width:420px; margin:30px auto; box-shadow:var(--shadow-lg); }
+  .form-card::before{ content:''; position:absolute; top:0; left:16px; right:16px; height:1px;
+    background:linear-gradient(90deg,transparent,rgba(244,185,60,0.5),transparent); }
+  .form-card h2{ font-size:21px; margin-bottom:6px; }
+  .form-card .sub{ color:var(--text-dim); font-size:12.5px; margin-bottom:22px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:12.5px; color:var(--text-dim); margin-bottom:6px; }
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--bg-card); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; color:var(--text); font-size:13.5px; transition:border-color .15s, box-shadow .15s; }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:none; border-color:var(--gold-dim); box-shadow:0 0 0 3px rgba(244,185,60,0.10); }
+  .field .hint{ font-size:11px; color:var(--text-faint); margin-top:5px; }
+  .full-btn{ width:100%; background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1a1200; font-weight:700; padding:12px; border:none; border-radius:8px; font-size:14px; transition:transform .15s, box-shadow .15s; }
+  .full-btn:hover{ transform:translateY(-1px); box-shadow:0 8px 20px -8px rgba(244,185,60,0.6); }
+  .full-btn:disabled{ background:#2a2e38; color:#5c6270; cursor:not-allowed; transform:none; box-shadow:none; }
+  .swap-link{ text-align:center; margin-top:14px; font-size:12.5px; color:var(--text-dim); }
+  .swap-link a{ color:var(--gold); }
+
+  .tabbar{ display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:20px; flex-wrap:wrap; }
+  .tabbar button{ background:none; border:none; color:var(--text-dim); padding:10px 16px; font-size:13.5px; border-bottom:2px solid transparent; transition:color .15s, border-color .15s; }
+  .tabbar button:hover{ color:var(--text); }
+  .tabbar button.active{ color:var(--gold); border-bottom-color:var(--gold); font-weight:600; }
+
+  .account-grid{ display:grid; grid-template-columns:300px 1fr; gap:22px; }
+  .balance-card{ position:relative; overflow:hidden; background:linear-gradient(135deg, rgba(244,185,60,.14), rgba(139,107,240,.08)); border:1px solid var(--gold-dim);
+    border-radius:16px; padding:24px; box-shadow:0 18px 36px -18px rgba(244,185,60,0.3); }
+  .balance-card::before{ content:''; position:absolute; inset:0; pointer-events:none; opacity:.6;
+    background:repeating-linear-gradient(115deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 34px); }
+  .balance-card > *{ position:relative; z-index:1; }
+  .balance-card .lbl{ font-size:12px; color:var(--text-dim); letter-spacing:.3px; }
+  .balance-card .amt{ font-family:'Kanit'; font-size:34px; font-weight:700; color:var(--gold); margin:6px 0 16px; text-shadow:0 2px 20px rgba(244,185,60,0.25); }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; color:var(--text-dim); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.4px;
+    padding:9px 10px; border-bottom:1px solid var(--line); }
+  td{ padding:11px 10px; border-bottom:1px solid var(--line); }
+  tr{ transition:background .12s; }
+  tr:hover td{ background:#161a24; }
+  .empty-row td{ text-align:center; color:var(--text-dim); padding:30px; }
+
+  .row-actions{ display:flex; gap:6px; }
+  .icon-btn{ background:var(--bg-card); border:1px solid var(--line); padding:5px 10px; border-radius:6px; font-size:11.5px; color:var(--text-dim); transition:color .15s, border-color .15s; }
+  .icon-btn:hover{ color:var(--text); border-color:var(--gold-dim); }
+  .icon-btn.danger:hover{ color:var(--danger); border-color:var(--danger); }
+
+  .admin-grid-form{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .badge-role{ font-size:10.5px; padding:2px 9px; border-radius:10px; background:rgba(139,107,240,.15); color:var(--violet-soft); border:1px solid rgba(139,107,240,.35); }
+  .badge-role.admin{ background:rgba(244,185,60,.15); color:var(--gold); border-color:rgba(244,185,60,.35); }
+
+  .badge-status{ font-size:10.5px; padding:2px 9px; border-radius:10px; border:1px solid; font-weight:500; }
+  .badge-status.pending{ background:rgba(244,185,60,.12); color:var(--gold); border-color:rgba(244,185,60,.35); }
+  .badge-status.approved{ background:rgba(79,209,139,.12); color:var(--ok); border-color:rgba(79,209,139,.35); }
+  .badge-status.rejected{ background:rgba(224,87,79,.12); color:var(--danger); border-color:rgba(224,87,79,.35); }
+
+  .notice{ background:rgba(139,107,240,.08); border:1px solid rgba(139,107,240,.3); color:var(--violet-soft);
+    padding:11px 15px; border-radius:10px; font-size:12px; margin-bottom:18px; line-height:1.6; }
+  .notice.warn{ background:rgba(224,87,79,.08); border-color:rgba(224,87,79,.3); color:#ffb4af; }
+
+  .qr-box{ background:#fff; border-radius:14px; padding:18px; display:flex; align-items:center; justify-content:center; margin:14px 0;
+    box-shadow:0 12px 28px -14px rgba(244,185,60,0.4); }
+  .qr-box img, .qr-box canvas{ display:block; }
+  .qr-meta{ text-align:center; font-size:12.5px; color:var(--text-dim); margin-bottom:4px; }
+  .qr-meta b{ color:var(--gold); font-family:'Kanit'; }
+  .step-num{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%;
+    background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1a1200; font-size:11px; font-weight:700; margin-right:6px; flex-shrink:0; }
+  .file-drop{ border:1.5px dashed var(--line); border-radius:10px; padding:16px; text-align:center; font-size:12.5px; color:var(--text-dim); transition:border-color .15s, background .15s; }
+  .file-drop:hover{ border-color:var(--gold-dim); background:rgba(244,185,60,0.03); }
+  .file-drop input{ font-size:12px; color:var(--text-dim); width:100%; }
+  .slip-preview{ max-width:100%; max-height:160px; border-radius:8px; margin-top:10px; display:none; border:1px solid var(--line); }
+
+  /* ---------- Admin contact badge ---------- */
+  .contact-fab{
+    position:fixed; right:22px; bottom:22px; z-index:60;
+    display:flex; align-items:center; gap:0; text-decoration:none;
+  }
+  .contact-fab .badge-shape{
+    width:54px; height:54px; flex-shrink:0; position:relative;
+    clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    background:linear-gradient(145deg,var(--gold-bright),var(--gold) 45%,var(--gold-deep));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 8px 22px -6px rgba(244,185,60,0.55), 0 0 0 1px rgba(244,185,60,0.25);
+    animation:fabPulse 2.6s ease-in-out infinite;
+    transition:transform .2s ease;
+  }
+  .contact-fab:hover .badge-shape{ transform:scale(1.06) rotate(-4deg); }
+  @keyframes fabPulse{ 0%,100%{ box-shadow:0 8px 22px -6px rgba(244,185,60,0.55), 0 0 0 1px rgba(244,185,60,0.25); } 50%{ box-shadow:0 8px 26px -4px rgba(244,185,60,0.8), 0 0 0 4px rgba(244,185,60,0.12); } }
+  .contact-fab .badge-shape svg{ width:24px; height:24px; fill:#1a1200; }
+  .contact-fab .tip{
+    max-width:0; overflow:hidden; white-space:nowrap; background:var(--bg-card); border:1px solid var(--gold-dim);
+    color:var(--text); font-size:12.5px; font-weight:600; padding:0; border-radius:8px; margin-right:0;
+    box-shadow:var(--shadow-lg);
+    transition:max-width .25s ease, padding .25s ease, margin .25s ease;
+  }
+  .contact-fab:hover .tip{ max-width:160px; padding:9px 14px; margin-right:10px; }
+  @media (max-width:520px){ .contact-fab{ right:14px; bottom:14px; } .contact-fab .tip{ display:none; } }
+
+  footer{ border-top:1px solid var(--line); padding:26px; text-align:center; color:var(--text-faint); font-size:12px; }
+
+  @media (max-width:880px){ .layout,.account-grid{ grid-template-columns:1fr; } .grid{ grid-template-columns:repeat(2,1fr); } .admin-grid-form{grid-template-columns:1fr;} }
+  @media (max-width:520px){ .grid{ grid-template-columns:1fr; } nav{ display:none; } }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<header>
+  <div class="header-inner">
+    <div class="logo"><span class="mark"></span>tanabibi</div>
+    <nav>
+      <a onclick="goView('shop')" id="nav-shop">หน้าร้าน</a>
+      <a onclick="goView('account')" id="nav-account">บัญชีของฉัน</a>
+      <a onclick="goView('admin')" id="nav-admin" style="display:none;">หลังบ้าน</a>
+      <a href="https://www.facebook.com/rattana.charoenchai.7" target="_blank" rel="noopener noreferrer">ติดต่อแอดมิน</a>
+    </nav>
+    <div class="conn-dot" id="conn-dot"><span class="dot"></span><span id="conn-label">กำลังตรวจสอบ...</span></div>
+    <div class="header-actions" id="header-actions"></div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<a class="contact-fab" href="https://www.facebook.com/rattana.charoenchai.7" target="_blank" rel="noopener noreferrer" aria-label="ติดต่อแอดมินทาง Facebook">
+  <span class="tip">ติดต่อแอดมิน</span>
+  <span class="badge-shape">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.13 2 11.23c0 2.9 1.44 5.49 3.7 7.19V22l3.38-1.86c.9.25 1.86.38 2.92.38 5.52 0 10-4.13 10-9.23S17.52 2 12 2zm1.02 12.44-2.55-2.72-4.98 2.72 5.48-5.82 2.62 2.72 4.9-2.72-5.47 5.82z"/></svg>
+  </span>
+</a>
+
+<footer>© 2026 tanabibi — เชื่อมต่อกับ backend API จริงผ่าน HTTP (ดูสถานะการเชื่อมต่อที่มุมขวาบน)</footer>
+
+<script>
+/* ============== CONFIG / STATE ============== */
+let API_BASE = 'https://cloud1-production-eb6a.up.railway.app/api';
+let authToken = null;
+let me = null; // { id, username, role, balance }
+let apiConnected = null;
+
+let view = 'shop';
+let selectedCategory = 'ทั้งหมด';
+let adminTab = 'products';
+let editingProductId = null;
+let pendingProductImage = undefined; // undefined = no change, null = removed, string = new base64 image
+
+let allProducts = [];
+let myOrders = [];
+let myTopups = [];
+let adminUsers = [];
+let adminOrders = [];
+let adminTopups = [];
+let adminTopupFilter = 'pending';
+let promptpayNumber = ''; // fetched from backend so it's not hardcoded on the front end
+let qrAmount = null;
+let slipFile = null;
+
+let categories = []; // fetched from /api/categories, managed by admins now
+
+/* ============== PROMPTPAY QR PAYLOAD (EMVCo / Bank of Thailand spec) ============== */
+function crc16(str){
+  let crc = 0xFFFF;
+  for(let c = 0; c < str.length; c++){
+    crc ^= str.charCodeAt(c) << 8;
+    for(let i = 0; i < 8; i++){
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc;
+}
+function ppTag(id, value){
+  const len = String(value.length).padStart(2, '0');
+  return id + len + value;
+}
+function ppFormatTarget(id){
+  const digits = id.replace(/[^0-9]/g, '');
+  let formatted;
+  if(digits.length === 13){ formatted = digits; } // national ID / tax ID
+  else { formatted = digits.replace(/^0/, '66'); } // mobile number
+  return formatted.padStart(13, '0');
+}
+function buildPromptPayPayload(target, amount){
+  const parts = [
+    ppTag('00', '01'),                    // payload format indicator
+    ppTag('01', amount ? '12' : '11'),    // dynamic if amount is set, else static
+    ppTag('29', ppTag('00', 'A000000677010111') + ppTag('01', ppFormatTarget(target))),
+    ppTag('58', 'TH'),                    // country code
+    ppTag('53', '764'),                   // currency: THB
+  ];
+  if(amount) parts.push(ppTag('54', amount.toFixed(2))); // transaction amount
+  const partial = parts.join('') + '6304';
+  const crc = crc16(partial).toString(16).toUpperCase().padStart(4, '0');
+  return partial + crc;
+}
+function renderQrInto(elId, payload){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  el.innerHTML = '';
+  new QRCode(el, { text: payload, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+}
+
+/* ============== API HELPER ============== */
+async function apiFetch(path, opts){
+  opts = opts || {};
+  const headers = Object.assign({'Content-Type':'application/json'}, opts.headers || {});
+  if(authToken) headers['Authorization'] = 'Bearer ' + authToken;
+  let res;
+  try{
+    res = await fetch(API_BASE + path, Object.assign({}, opts, { headers }));
+  }catch(networkErr){
+    throw new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบว่า backend รันอยู่และ URL ถูกต้อง (ดูที่เมนู "การเชื่อมต่อ")');
+  }
+  let data = null;
+  try{ data = await res.json(); }catch(e){ /* no body */ }
+  if(!res.ok){ throw new Error((data && data.error) || ('เกิดข้อผิดพลาด (' + res.status + ')')); }
+  return data;
+}
+
+async function checkConnection(){
+  try{
+    const res = await fetch(API_BASE + '/health');
+    apiConnected = res.ok;
+  }catch(e){ apiConnected = false; }
+  updateConnDot();
+}
+function updateConnDot(){
+  const dot = document.querySelector('#conn-dot .dot');
+  const label = document.getElementById('conn-label');
+  if(apiConnected === null){ dot.className = 'dot'; label.textContent = 'กำลังตรวจสอบ...'; }
+  else if(apiConnected){ dot.className = 'dot on'; label.textContent = 'เชื่อมต่อสำเร็จ'; }
+  else { dot.className = 'dot off'; label.textContent = 'เชื่อมต่อไม่ได้'; }
+}
+
+/* ============== UI HELPERS ============== */
+let toastTimer = null;
+function showToast(msg, kind){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (kind || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.className = 'toast ' + (kind||''); }, 2800);
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function statusLabel(s){ return s==='pending' ? 'รอตรวจสอบ' : s==='approved' ? 'อนุมัติแล้ว' : 'ปฏิเสธ'; }
+
+/* ============== NAVIGATION / DATA LOADING ============== */
+async function goView(v){
+  view = v; editingProductId = null;
+  render();
+  window.scrollTo({top:0});
+
+  if(v === 'shop'){
+    try{ [allProducts, categories] = await Promise.all([apiFetch('/products'), apiFetch('/categories')]); }catch(err){ showToast(err.message,'err'); }
+    render();
+  } else if(v === 'account'){
+    if(!me){ view = 'login'; render(); return; }
+    try{
+      const [orders, topups, fresh, pp] = await Promise.all([
+        apiFetch('/orders/me'), apiFetch('/wallet/topup-requests/me'), apiFetch('/auth/me'), apiFetch('/wallet/promptpay-number')
+      ]);
+      myOrders = orders; myTopups = topups; me = fresh; promptpayNumber = pp.number || '';
+    }catch(err){ showToast(err.message,'err'); }
+    render();
+  } else if(v === 'admin'){
+    if(!me || me.role !== 'admin'){ render(); return; }
+    await loadAdminTabData();
+    render();
+  }
+}
+async function loadAdminTabData(){
+  try{
+    if(adminTab === 'products'){ [allProducts, categories] = await Promise.all([apiFetch('/products'), apiFetch('/categories')]); }
+    else if(adminTab === 'topups'){ adminTopups = await apiFetch('/admin/topup-requests' + (adminTopupFilter ? ('?status=' + adminTopupFilter) : '')); }
+    else if(adminTab === 'users'){ adminUsers = await apiFetch('/admin/users'); }
+    else if(adminTab === 'orders'){ adminOrders = await apiFetch('/orders'); }
+    else if(adminTab === 'categories'){ [categories, allProducts] = await Promise.all([apiFetch('/categories'), apiFetch('/products')]); }
+  }catch(err){ showToast(err.message,'err'); }
+}
+async function setAdminTab(t){ adminTab = t; render(); await loadAdminTabData(); render(); }
+async function setAdminTopupFilter(v){ adminTopupFilter = v; await loadAdminTabData(); render(); }
+function selectCategory(c){ selectedCategory = c; render(); }
+
+/* ============== AUTH ============== */
+async function doRegister(e){
+  e.preventDefault();
+  const f = e.target;
+  const username = f.username.value.trim();
+  const password = f.password.value;
+  const confirm = f.confirm.value;
+  if(password !== confirm){ showToast('รหัสผ่านไม่ตรงกัน','err'); return; }
+  try{
+    const data = await apiFetch('/auth/register', { method:'POST', body: JSON.stringify({ username, password }) });
+    authToken = data.token; me = data.user;
+    saveToken(authToken);
+    showToast('สมัครสมาชิกสำเร็จ ยินดีต้อนรับ ' + me.username, 'ok');
+    goView('shop');
+  }catch(err){ showToast(err.message, 'err'); }
+}
+async function doLogin(e){
+  e.preventDefault();
+  const f = e.target;
+  try{
+    const data = await apiFetch('/auth/login', { method:'POST', body: JSON.stringify({ username: f.username.value.trim(), password: f.password.value }) });
+    authToken = data.token; me = data.user;
+    saveToken(authToken);
+    showToast('เข้าสู่ระบบสำเร็จ', 'ok');
+    goView(me.role === 'admin' ? 'admin' : 'shop');
+  }catch(err){ showToast(err.message, 'err'); }
+}
+function doLogout(){ authToken = null; me = null; saveToken(null); showToast('ออกจากระบบแล้ว'); goView('shop'); }
+async function doChangePassword(e){
+  e.preventDefault();
+  const f = e.target;
+  const currentPassword = f.currentPassword.value;
+  const newPassword = f.newPassword.value;
+  const confirmPassword = f.confirmPassword.value;
+  if(newPassword !== confirmPassword){ showToast('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน', 'err'); return; }
+  try{
+    await apiFetch('/auth/me/password', { method:'PUT', body: JSON.stringify({ currentPassword, newPassword }) });
+    showToast('เปลี่ยนรหัสผ่านสำเร็จ', 'ok');
+    f.reset();
+  }catch(err){ showToast(err.message, 'err'); }
+}
+
+/* ============== SESSION PERSISTENCE (localStorage) ==============
+   Note: localStorage does NOT work inside Claude's own artifact preview
+   sandbox — it's disabled there by design. It works normally once this
+   file is deployed on its own (GitHub Pages, your own server, etc.),
+   which is the setup this function is for. Wrapped in try/catch so the
+   app still works fine inside the Claude preview; it just won't
+   remember your login between refreshes there. */
+function saveToken(token){
+  try{
+    if(token) localStorage.setItem('pv_token', token);
+    else localStorage.removeItem('pv_token');
+  }catch(e){ /* storage unavailable (e.g. inside Claude's artifact preview) — ignore */ }
+}
+function loadSavedToken(){
+  try{ return localStorage.getItem('pv_token'); }catch(e){ return null; }
+}
+async function restoreSession(){
+  const saved = loadSavedToken();
+  if(!saved) return;
+  authToken = saved;
+  try{
+    me = await apiFetch('/auth/me');
+  }catch(e){
+    authToken = null; me = null; saveToken(null);
+  }
+}
+
+/* ============== WALLET: QR + SLIP TOP-UP ============== */
+function generateTopupQr(e){
+  e.preventDefault();
+  const amount = parseInt(e.target.amount.value, 10);
+  if(!amount || amount <= 0){ showToast('กรุณาระบุจำนวนเงินให้ถูกต้อง','err'); return; }
+  if(!promptpayNumber){ showToast('ไม่พบเลขพร้อมเพย์ปลายทาง ตรวจสอบการตั้งค่า backend','err'); return; }
+  qrAmount = amount;
+  slipFile = null;
+  render();
+  renderQrInto('pp-qr', buildPromptPayPayload(promptpayNumber, amount));
+}
+function onSlipFileChosen(input){
+  slipFile = input.files && input.files[0] ? input.files[0] : null;
+  const preview = document.getElementById('slip-preview');
+  if(slipFile && preview){
+    preview.src = URL.createObjectURL(slipFile);
+    preview.style.display = 'block';
+  }
+  document.getElementById('slip-submit-btn').disabled = !slipFile;
+}
+function cancelTopupQr(){ qrAmount = null; slipFile = null; render(); }
+async function submitSlip(){
+  if(!slipFile || !qrAmount){ showToast('กรุณาแนบรูปสลิปก่อน','err'); return; }
+  const btn = document.getElementById('slip-submit-btn');
+  btn.disabled = true; btn.textContent = 'กำลังตรวจสอบสลิป...';
+  try{
+    const fd = new FormData();
+    fd.append('amount', String(qrAmount));
+    fd.append('image', slipFile);
+    const headers = authToken ? { Authorization: 'Bearer ' + authToken } : {};
+    const res = await fetch(API_BASE + '/wallet/topup-slip', { method:'POST', headers, body: fd });
+    const data = await res.json().catch(()=>null);
+    if(!res.ok) throw new Error((data && data.error) || 'ตรวจสอบสลิปไม่สำเร็จ');
+    showToast(`เติมเงินสำเร็จ! ยอด ${qrAmount.toLocaleString()} บาท เข้ากระเป๋าแล้ว`, 'ok');
+    qrAmount = null; slipFile = null;
+    const [topups, fresh] = await Promise.all([apiFetch('/wallet/topup-requests/me'), apiFetch('/auth/me')]);
+    myTopups = topups; me = fresh;
+    render();
+  }catch(err){
+    showToast(err.message, 'err');
+    try{ myTopups = await apiFetch('/wallet/topup-requests/me'); }catch(e){}
+    btn.disabled = false; btn.textContent = 'ส่งสลิปเพื่อตรวจสอบ';
+  }
+}
+
+/* ============== WALLET: MANUAL FALLBACK ============== */
+async function doTopupRequest(e){
+  e.preventDefault();
+  const f = e.target;
+  const amount = parseInt(f.amount.value, 10);
+  if(!amount || amount <= 0){ showToast('กรุณาระบุจำนวนเงินให้ถูกต้อง','err'); return; }
+  try{
+    await apiFetch('/wallet/topup-request', { method:'POST', body: JSON.stringify({ amount, method: f.method.value, reference: f.reference.value.trim() }) });
+    showToast('ส่งคำขอเติมเงินแล้ว รอแอดมินตรวจสอบและอนุมัติ', 'ok');
+    f.reset();
+    myTopups = await apiFetch('/wallet/topup-requests/me');
+    render();
+  }catch(err){ showToast(err.message, 'err'); }
+}
+
+/* ============== SHOP / PURCHASE ============== */
+async function buyProduct(id){
+  if(!me){ showToast('กรุณาเข้าสู่ระบบก่อนซื้อสินค้า','err'); goView('login'); return; }
+  try{
+    await apiFetch('/orders', { method:'POST', body: JSON.stringify({ productId: id }) });
+    showToast('ซื้อสำเร็จ! ตรวจสอบรายการได้ที่บัญชีของฉัน', 'ok');
+    const [products, fresh] = await Promise.all([apiFetch('/products'), apiFetch('/auth/me')]);
+    allProducts = products; me = fresh;
+    render();
+  }catch(err){ showToast(err.message, 'err'); }
+}
+
+/* ============== ADMIN: PRODUCTS ============== */
+async function adminSaveProduct(e){
+  e.preventDefault();
+  const f = e.target;
+  const payload = {
+    title: f.title.value.trim(),
+    category: f.category.value,
+    price: parseInt(f.price.value, 10),
+    stock: parseInt(f.stock.value, 10),
+    specs: f.specs.value.split(',').map(s=>s.trim()).filter(Boolean),
+  };
+  if(pendingProductImage !== undefined) payload.imageUrl = pendingProductImage;
+  try{
+    if(editingProductId){
+      await apiFetch('/products/' + editingProductId, { method:'PUT', body: JSON.stringify(payload) });
+      showToast('แก้ไขสินค้าเรียบร้อย','ok');
+    } else {
+      await apiFetch('/products', { method:'POST', body: JSON.stringify(payload) });
+      showToast('เพิ่มสินค้าเรียบร้อย','ok');
+    }
+    editingProductId = null;
+    pendingProductImage = undefined;
+    allProducts = await apiFetch('/products');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+function adminEditProduct(id){ editingProductId = id; pendingProductImage = undefined; render(); document.getElementById('product-form-anchor')?.scrollIntoView({behavior:'smooth'}); }
+function adminCancelEdit(){ editingProductId = null; pendingProductImage = undefined; render(); }
+function onProductImageChosen(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(file.size > 1.5 * 1024 * 1024){ showToast('ไฟล์รูปใหญ่เกินไป (จำกัด 1.5MB) เลือกรูปที่เล็กลง', 'err'); input.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = () => {
+    pendingProductImage = reader.result;
+    const preview = document.getElementById('product-img-preview');
+    if(preview){ preview.src = pendingProductImage; preview.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
+}
+function removeProductImage(){
+  pendingProductImage = null;
+  const preview = document.getElementById('product-img-preview');
+  if(preview){ preview.src=''; preview.style.display = 'none'; }
+  const input = document.getElementById('product-img-input');
+  if(input) input.value = '';
+}
+async function adminDeleteProduct(id){
+  try{
+    await apiFetch('/products/' + id, { method:'DELETE' });
+    showToast('ลบสินค้าแล้ว');
+    allProducts = await apiFetch('/products');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+
+/* ============== ADMIN: CATEGORIES ============== */
+async function adminAddCategory(e){
+  e.preventDefault();
+  const name = e.target.name.value.trim();
+  if(!name){ showToast('กรุณาระบุชื่อหมวดหมู่','err'); return; }
+  try{
+    await apiFetch('/categories', { method:'POST', body: JSON.stringify({ name }) });
+    showToast('เพิ่มหมวดหมู่แล้ว','ok');
+    e.target.reset();
+    categories = await apiFetch('/categories');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+async function adminDeleteCategory(id, name){
+  const inUse = allProducts.filter(p => p.category === name).length;
+  const msg = inUse > 0
+    ? `มีสินค้า ${inUse} รายการอยู่ในหมวดนี้ ลบแล้วสินค้าจะยังอยู่แต่จะไม่มีหมวดหมู่นี้ให้กรองอีก ต้องการลบไหม?`
+    : `ลบหมวดหมู่ "${name}" ใช่ไหม?`;
+  if(!confirm(msg)) return;
+  try{
+    await apiFetch('/categories/' + id, { method:'DELETE' });
+    showToast('ลบหมวดหมู่แล้ว');
+    categories = await apiFetch('/categories');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+
+/* ============== ADMIN: TOP-UP REQUESTS ============== */
+async function adminApproveTopup(id){
+  try{
+    await apiFetch('/admin/topup-requests/' + id + '/approve', { method:'POST' });
+    showToast('อนุมัติคำขอเติมเงินแล้ว','ok');
+    await loadAdminTabData();
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+async function adminRejectTopup(id){
+  try{
+    await apiFetch('/admin/topup-requests/' + id + '/reject', { method:'POST' });
+    showToast('ปฏิเสธคำขอแล้ว');
+    await loadAdminTabData();
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+
+/* ============== ADMIN: USERS ============== */
+async function adminAdjustBalance(userId, username){
+  const val = prompt('ปรับยอดเงินของ ' + username + ' (ค่าบวก=เติม เช่น 100, ค่าลบ=หัก เช่น -50)');
+  if(val === null) return;
+  const num = parseInt(val, 10);
+  if(!num){ showToast('กรุณาใส่ตัวเลข','err'); return; }
+  try{
+    await apiFetch('/admin/users/' + userId + '/adjust-balance', { method:'POST', body: JSON.stringify({ delta: num }) });
+    showToast('ปรับยอดเงินเรียบร้อย','ok');
+    adminUsers = await apiFetch('/admin/users');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+async function adminToggleRole(userId, currentRole){
+  const nextRole = currentRole === 'admin' ? 'user' : 'admin';
+  try{
+    await apiFetch('/admin/users/' + userId + '/role', { method:'POST', body: JSON.stringify({ role: nextRole }) });
+    adminUsers = await apiFetch('/admin/users');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
+
+/* ============== SETTINGS ============== */
+async function saveApiBase(e){
+  e.preventDefault();
+  let val = e.target.apiBase.value.trim();
+  if(val.endsWith('/')) val = val.slice(0, -1);
+  API_BASE = val;
+  showToast('บันทึก URL แล้ว กำลังทดสอบการเชื่อมต่อ...');
+  await checkConnection();
+  if(apiConnected){ allProducts = await apiFetch('/products').catch(()=>[]); }
+  render();
+}
+
+/* ============== RENDER: SHOP ============== */
+function renderShop(){
+  const cats = ['ทั้งหมด', ...categories.map(c => c.name)];
+  const filtered = selectedCategory === 'ทั้งหมด' ? allProducts : allProducts.filter(p => p.category === selectedCategory);
+  const catCount = c => c === 'ทั้งหมด' ? allProducts.length : allProducts.filter(p=>p.category===c).length;
+
+  return `
+    ${apiConnected === false ? `<div class="notice warn">เชื่อมต่อ backend ไม่ได้ — ตรวจสอบว่าเซิร์ฟเวอร์รันอยู่ที่ <code>${esc(API_BASE)}</code> แล้วไปที่เมนู "การเชื่อมต่อ" เพื่อแก้ไข URL หากจำเป็น</div>` : ''}
+    <div class="breadcrumb">หน้าแรก / สินค้าทั้งหมด / <span class="cur">${esc(selectedCategory)}</span></div>
+    <div class="hero-band">
+      <div><h1>ร้านไอดีเกม tanabibi</h1><div class="sub">เลือกซื้อไอดีตามหมวดหมู่ ชำระด้วยยอดเงินในกระเป๋าของคุณ</div></div>
+    </div>
+    <div class="layout">
+      <aside>
+        <div class="panel">
+          <h3>หมวดหมู่</h3>
+          <div class="cat-list">
+            ${cats.map(c => `<a class="${c===selectedCategory?'active':''}" onclick="selectCategory('${esc(c)}')">${esc(c)} <span class="n">${catCount(c)}</span></a>`).join('')}
+          </div>
+        </div>
+      </aside>
+      <div>
+        <div class="grid-head">
+          <h2>${esc(selectedCategory)} <span class="count">— พบ ${filtered.length} รายการ</span></h2>
+        </div>
+        <div class="grid">
+          ${filtered.length ? filtered.map(p => `
+            <div class="card">
+              <div class="thumb">
+                ${p.imageUrl ? `<img src="${esc(p.imageUrl)}" class="prod-img" alt="${esc(p.title)}">` : `<div class="icon"></div>`}
+                <div class="tag ${p.stock<=0?'sold':''}">${p.stock<=0?'ขายแล้ว':esc(p.category)}</div>
+                <div class="stock-flag">${p.stock>0 ? 'เหลือ '+p.stock : 'หมด'}</div>
+              </div>
+              <div class="card-body">
+                <div class="card-title">${esc(p.title)}</div>
+                <div class="spec-row">${p.specs.map(s=>`<span class="spec">${esc(s)}</span>`).join('')}</div>
+                <div class="price-row">
+                  <div class="price">${p.price.toLocaleString()}<span class="unit">บาท</span></div>
+                  <button class="buy-btn ${p.stock<=0?'disabled':''}" ${p.stock<=0?'disabled':''} onclick="buyProduct('${p.id}')">${p.stock<=0?'หมด':'ซื้อเลย'}</button>
+                </div>
+              </div>
+            </div>
+          `).join('') : `<div class="panel" style="grid-column:1/-1; text-align:center; color:var(--text-dim);">ไม่พบสินค้า — ตรวจสอบการเชื่อมต่อ backend หรือยังไม่มีสินค้าในหมวดนี้</div>`}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== RENDER: AUTH ============== */
+function renderLogin(){
+  return `
+    <div class="form-card">
+      <h2>เข้าสู่ระบบ</h2>
+      <form onsubmit="doLogin(event)">
+        <div class="field"><label>ชื่อผู้ใช้</label><input name="username" required autocomplete="username"></div>
+        <div class="field"><label>รหัสผ่าน</label><input name="password" type="password" required autocomplete="current-password"></div>
+        <button class="full-btn" type="submit">เข้าสู่ระบบ</button>
+      </form>
+      <div class="swap-link">ยังไม่มีบัญชี? <a onclick="goView('register')">สมัครสมาชิก</a></div>
+    </div>
+  `;
+}
+function renderRegister(){
+  return `
+    <div class="form-card">
+      <h2>สมัครสมาชิก</h2>
+      <div class="sub">รหัสผ่านอย่างน้อย 6 ตัวอักษร</div>
+      <form onsubmit="doRegister(event)">
+        <div class="field"><label>ชื่อผู้ใช้</label><input name="username" required autocomplete="username"></div>
+        <div class="field"><label>รหัสผ่าน</label><input name="password" type="password" required minlength="6" autocomplete="new-password"></div>
+        <div class="field"><label>ยืนยันรหัสผ่าน</label><input name="confirm" type="password" required minlength="6" autocomplete="new-password"></div>
+        <button class="full-btn" type="submit">สมัครสมาชิก</button>
+      </form>
+      <div class="swap-link">มีบัญชีอยู่แล้ว? <a onclick="goView('login')">เข้าสู่ระบบ</a></div>
+    </div>
+  `;
+}
+
+/* ============== RENDER: SETTINGS ============== */
+function renderSettings(){
+  return `
+    <div class="form-card" style="margin:0; max-width:480px;">
+      <h2>การเชื่อมต่อ backend</h2>
+      <div class="sub">ใส่ URL ของ API server ที่รันอยู่ (ดู README ของ backend สำหรับวิธีรัน)</div>
+      <form onsubmit="saveApiBase(event)">
+        <div class="field">
+          <label>API Base URL</label>
+          <input name="apiBase" value="${esc(API_BASE)}" placeholder="http://localhost:4000/api">
+          <div class="hint">ค่าเริ่มต้นคือ backend ที่รันบนเครื่องตัวเอง (localhost) หากดีพลอยขึ้นเซิร์ฟเวอร์จริงแล้ว ให้เปลี่ยนเป็น URL นั้น เช่น https://your-api.example.com/api</div>
+        </div>
+        <button class="full-btn" type="submit">บันทึกและทดสอบการเชื่อมต่อ</button>
+      </form>
+      <div class="notice" style="margin-top:16px;">สถานะปัจจุบัน: ${apiConnected ? '<span style="color:var(--ok)">เชื่อมต่อสำเร็จ</span>' : apiConnected === false ? '<span style="color:var(--danger)">เชื่อมต่อไม่ได้</span>' : 'กำลังตรวจสอบ...'}</div>
+    </div>
+  `;
+}
+
+/* ============== RENDER: ACCOUNT ============== */
+function renderAccount(){
+  if(!me) return renderLogin();
+  return `
+    <div class="breadcrumb">หน้าแรก / <span class="cur">บัญชีของฉัน</span></div>
+    <div class="account-grid">
+      <div>
+        <div class="balance-card">
+          <div class="lbl">ยอดเงินคงเหลือ</div>
+          <div class="amt">฿${me.balance.toLocaleString()}</div>
+
+          ${!qrAmount ? `
+            <form onsubmit="generateTopupQr(event)">
+              <div class="field"><label>จำนวนเงินที่ต้องการเติม (บาท)</label><input name="amount" type="number" min="1" step="1" placeholder="เช่น 100" required></div>
+              <button class="full-btn" type="submit">สร้าง QR พร้อมเพย์</button>
+            </form>
+          ` : `
+            <div class="qr-meta"><span class="step-num">1</span>สแกนจ่ายผ่านแอปธนาคาร — ยอด <b>฿${qrAmount.toLocaleString()}</b></div>
+            <div class="qr-box" id="pp-qr"></div>
+            <div class="qr-meta" style="margin-bottom:12px;">พร้อมเพย์: ${esc(promptpayNumber)}</div>
+            <div class="qr-meta" style="text-align:left; margin-bottom:6px;"><span class="step-num">2</span>แนบรูปสลิปหลังโอนเสร็จ</div>
+            <div class="file-drop">
+              <input type="file" accept="image/*" onchange="onSlipFileChosen(this)">
+              <img id="slip-preview" class="slip-preview">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <button class="full-btn" id="slip-submit-btn" onclick="submitSlip()" disabled style="width:auto; flex:1;">ส่งสลิปเพื่อตรวจสอบ</button>
+              <button class="pill-btn" onclick="cancelTopupQr()" type="button">ยกเลิก</button>
+            </div>
+            <div class="notice" style="margin-top:14px;">ระบบตรวจสอบสลิปอัตโนมัติผ่าน EasySlip — ถ้ายอดเงินและสลิปถูกต้อง เงินจะเข้ากระเป๋าทันทีโดยไม่ต้องรอแอดมิน</div>
+          `}
+
+          <details style="margin-top:16px;">
+            <summary style="cursor:pointer; font-size:12px; color:var(--text-dim);">โอนแล้วแต่ระบบตรวจสลิปไม่ผ่าน? ส่งคำขอให้แอดมินตรวจสอบเอง</summary>
+            <form onsubmit="doTopupRequest(event)" style="margin-top:12px;">
+              <div class="field"><label>จำนวนเงินที่โอนแล้ว (บาท)</label><input name="amount" type="number" min="1" step="1" required></div>
+              <div class="field"><label>ช่องทางที่โอน</label>
+                <select name="method">
+                  <option value="promptpay_manual">พร้อมเพย์</option>
+                  <option value="bank_transfer">โอนผ่านธนาคาร</option>
+                </select>
+              </div>
+              <div class="field"><label>หมายเลขอ้างอิง / เลขท้ายสลิป</label><input name="reference" placeholder="เช่น เลขอ้างอิงจากสลิป"></div>
+              <button class="full-btn" type="submit">ส่งคำขอให้แอดมินตรวจสอบ</button>
+            </form>
+          </details>
+        </div>
+        <div class="panel" style="margin-top:16px;">
+          <h3>ประวัติคำขอเติมเงิน</h3>
+          <table>
+            <thead><tr><th>จำนวน</th><th>สถานะ</th><th>วันที่</th></tr></thead>
+            <tbody>
+              ${myTopups.length ? myTopups.map(t => `
+                <tr><td>฿${t.amount.toLocaleString()}</td><td><span class="badge-status ${t.status}">${statusLabel(t.status)}</span>${t.failReason ? `<div style="font-size:10.5px; color:var(--text-dim); margin-top:3px;">${esc(t.failReason)}</div>` : ''}</td><td>${new Date(t.createdAt).toLocaleDateString('th-TH')}</td></tr>
+              `).join('') : `<tr class="empty-row"><td colspan="3">ยังไม่มีคำขอเติมเงิน</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>ประวัติการสั่งซื้อ</h3>
+        <table>
+          <thead><tr><th>รายการ</th><th>ราคา</th><th>วันที่</th></tr></thead>
+          <tbody>
+            ${myOrders.length ? myOrders.map(o => `
+              <tr><td>${esc(o.product.title)}</td><td>฿${o.price.toLocaleString()}</td><td>${new Date(o.createdAt).toLocaleString('th-TH')}</td></tr>
+            `).join('') : `<tr class="empty-row"><td colspan="3">ยังไม่มีประวัติการสั่งซื้อ</td></tr>`}
+          </tbody>
+        </table>
+        <div class="panel" style="margin-top:16px;">
+          <h3>เปลี่ยนรหัสผ่าน</h3>
+          <form onsubmit="doChangePassword(event)">
+            <div class="field"><label>รหัสผ่านเดิม</label><input name="currentPassword" type="password" required autocomplete="current-password"></div>
+            <div class="field"><label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label><input name="newPassword" type="password" required minlength="6" autocomplete="new-password"></div>
+            <div class="field"><label>ยืนยันรหัสผ่านใหม่</label><input name="confirmPassword" type="password" required minlength="6" autocomplete="new-password"></div>
+            <button class="full-btn" type="submit">บันทึกรหัสผ่านใหม่</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* ============== RENDER: ADMIN ============== */
+function renderAdmin(){
+  if(!me || me.role !== 'admin') return `<div class="panel">ต้องเข้าสู่ระบบด้วยบัญชีแอดมินเพื่อเข้าถึงหน้านี้</div>`;
+  const tabs = [['products','จัดการสินค้า'],['categories','จัดการหมวดหมู่'],['topups','คำขอเติมเงิน'],['users','จัดการสมาชิก'],['orders','คำสั่งซื้อทั้งหมด'],['settings','การเชื่อมต่อ']];
+  return `
+    <div class="breadcrumb">หน้าแรก / <span class="cur">หลังบ้าน</span></div>
+    <h1 style="font-size:22px; margin-bottom:16px;">แผงควบคุมผู้ดูแลระบบ</h1>
+    <div class="tabbar">
+      ${tabs.map(([k,l]) => `<button class="${adminTab===k?'active':''}" onclick="setAdminTab('${k}')">${l}</button>`).join('')}
+    </div>
+    ${adminTab==='products' ? renderAdminProducts() : adminTab==='categories' ? renderAdminCategories() : adminTab==='topups' ? renderAdminTopups() : adminTab==='users' ? renderAdminUsers() : adminTab==='settings' ? renderSettings() : renderAdminOrders()}
+  `;
+}
+
+function renderAdminCategories(){
+  return `
+    <div class="panel" style="margin-bottom:20px;">
+      <h3>เพิ่มหมวดหมู่ใหม่</h3>
+      <form onsubmit="adminAddCategory(event)" style="display:flex; gap:8px; align-items:flex-end;">
+        <div class="field" style="flex:1; margin-bottom:0;"><label>ชื่อหมวดหมู่</label><input name="name" required placeholder="เช่น ไอดีป้ายฟ้าเทพ"></div>
+        <button class="full-btn" type="submit" style="width:auto; padding:10px 22px;">เพิ่ม</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h3>หมวดหมู่ทั้งหมด (${categories.length})</h3>
+      <table>
+        <thead><tr><th>ชื่อหมวดหมู่</th><th>จำนวนสินค้าที่ใช้</th><th></th></tr></thead>
+        <tbody>
+          ${categories.length ? categories.map(c => `
+            <tr>
+              <td>${esc(c.name)}</td>
+              <td>${allProducts.filter(p => p.category === c.name).length}</td>
+              <td><button class="icon-btn danger" onclick="adminDeleteCategory('${c.id}','${esc(c.name)}')">ลบ</button></td>
+            </tr>
+          `).join('') : `<tr class="empty-row"><td colspan="3">ยังไม่มีหมวดหมู่</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminProducts(){
+  const editing = editingProductId ? allProducts.find(p=>p.id===editingProductId) : null;
+  return `
+    <div class="panel" id="product-form-anchor" style="margin-bottom:20px;">
+      <h3>${editing ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}</h3>
+      <form onsubmit="adminSaveProduct(event)">
+        <div class="admin-grid-form">
+          <div class="field"><label>ชื่อสินค้า</label><input name="title" required value="${editing?esc(editing.title):''}"></div>
+          <div class="field"><label>หมวดหมู่</label>
+            <select name="category">${categories.map(c=>`<option ${editing&&editing.category===c.name?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>ราคา (บาท)</label><input name="price" type="number" min="0" step="1" required value="${editing?editing.price:''}"></div>
+          <div class="field"><label>จำนวนสต๊อก</label><input name="stock" type="number" min="0" step="1" required value="${editing?editing.stock:''}"></div>
+        </div>
+        <div class="field"><label>คุณสมบัติ (คั่นด้วยจุลภาค)</label><input name="specs" value="${editing?esc(editing.specs.join(', ')):''}" placeholder="เช่น เซิร์ฟไทย, เพชร 0"></div>
+        <div class="field">
+          <label>รูปภาพสินค้า (ไม่เกิน 1.5MB)</label>
+          <input type="file" id="product-img-input" accept="image/*" onchange="onProductImageChosen(this)">
+          <img id="product-img-preview" src="${editing&&editing.imageUrl?esc(editing.imageUrl):''}" style="display:${editing&&editing.imageUrl?'block':'none'}; max-width:140px; max-height:140px; border-radius:8px; margin-top:8px; object-fit:cover;">
+          ${editing&&editing.imageUrl ? `<button type="button" class="pill-btn" style="margin-top:6px;" onclick="removeProductImage()">ลบรูป</button>` : ''}
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="full-btn" type="submit" style="width:auto; padding:10px 22px;">${editing?'บันทึกการแก้ไข':'เพิ่มสินค้า'}</button>
+          ${editing ? `<button type="button" class="pill-btn" onclick="adminCancelEdit()">ยกเลิก</button>` : ''}
+        </div>
+      </form>
+    </div>
+    <div class="panel">
+      <h3>รายการสินค้าทั้งหมด (${allProducts.length})</h3>
+      <table>
+        <thead><tr><th>ชื่อสินค้า</th><th>หมวดหมู่</th><th>ราคา</th><th>สต๊อก</th><th></th></tr></thead>
+        <tbody>
+          ${allProducts.length ? allProducts.map(p => `
+            <tr>
+              <td>${esc(p.title)}</td>
+              <td>${esc(p.category)}</td>
+              <td>฿${p.price.toLocaleString()}</td>
+              <td>${p.stock}</td>
+              <td><div class="row-actions">
+                <button class="icon-btn" onclick="adminEditProduct('${p.id}')">แก้ไข</button>
+                <button class="icon-btn danger" onclick="adminDeleteProduct('${p.id}')">ลบ</button>
+              </div></td>
+            </tr>
+          `).join('') : `<tr class="empty-row"><td colspan="5">ยังไม่มีสินค้า</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminTopups(){
+  return `
+    <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin-bottom:0;">คำขอเติมเงิน (${adminTopups.length})</h3>
+        <select onchange="setAdminTopupFilter(this.value)" style="background:var(--bg-card); border:1px solid var(--line); color:var(--text-dim); padding:7px 10px; border-radius:7px; font-size:12.5px;">
+          <option value="pending" ${adminTopupFilter==='pending'?'selected':''}>รอตรวจสอบ</option>
+          <option value="approved" ${adminTopupFilter==='approved'?'selected':''}>อนุมัติแล้ว</option>
+          <option value="rejected" ${adminTopupFilter==='rejected'?'selected':''}>ปฏิเสธแล้ว</option>
+          <option value="" ${adminTopupFilter===''?'selected':''}>ทั้งหมด</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>สมาชิก</th><th>จำนวน</th><th>ช่องทาง</th><th>อ้างอิง</th><th>สถานะ</th><th>วันที่</th><th></th></tr></thead>
+        <tbody>
+          ${adminTopups.length ? adminTopups.map(t => `
+            <tr>
+              <td>${esc(t.user.username)}</td>
+              <td>฿${t.amount.toLocaleString()}</td>
+              <td>${t.method === 'bank_transfer' ? 'ธนาคาร (แจ้งเอง)' : t.method === 'promptpay_manual' ? 'พร้อมเพย์ (แจ้งเอง)' : t.method === 'promptpay_slip' ? 'พร้อมเพย์ (ตรวจสลิปอัตโนมัติ)' : esc(t.method)}</td>
+              <td>${t.reference ? esc(t.reference) : '—'}${t.failReason ? `<div style="font-size:10.5px; color:var(--danger); margin-top:3px;">${esc(t.failReason)}</div>` : ''}</td>
+              <td><span class="badge-status ${t.status}">${statusLabel(t.status)}</span></td>
+              <td>${new Date(t.createdAt).toLocaleString('th-TH')}</td>
+              <td>${t.status === 'pending' ? `<div class="row-actions">
+                <button class="icon-btn" onclick="adminApproveTopup('${t.id}')">อนุมัติ</button>
+                <button class="icon-btn danger" onclick="adminRejectTopup('${t.id}')">ปฏิเสธ</button>
+              </div>` : ''}</td>
+            </tr>
+          `).join('') : `<tr class="empty-row"><td colspan="7">ไม่มีคำขอในสถานะนี้</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminUsers(){
+  return `
+    <div class="panel">
+      <h3>สมาชิกทั้งหมด (${adminUsers.length})</h3>
+      <table>
+        <thead><tr><th>ชื่อผู้ใช้</th><th>สิทธิ์</th><th>ยอดเงิน</th><th>สมัครเมื่อ</th><th></th></tr></thead>
+        <tbody>
+          ${adminUsers.map(u => `
+            <tr>
+              <td>${esc(u.username)}</td>
+              <td><span class="badge-role ${u.role==='admin'?'admin':''}">${u.role==='admin'?'แอดมิน':'สมาชิก'}</span></td>
+              <td>฿${u.balance.toLocaleString()}</td>
+              <td>${new Date(u.createdAt).toLocaleDateString('th-TH')}</td>
+              <td><div class="row-actions">
+                <button class="icon-btn" onclick="adminAdjustBalance('${u.id}','${esc(u.username)}')">ปรับยอดเงิน</button>
+                ${u.username!=='admin' ? `<button class="icon-btn" onclick="adminToggleRole('${u.id}','${u.role}')">${u.role==='admin'?'ถอดสิทธิ์แอดมิน':'ตั้งเป็นแอดมิน'}</button>` : ''}
+              </div></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminOrders(){
+  return `
+    <div class="panel">
+      <h3>คำสั่งซื้อทั้งหมด (${adminOrders.length})</h3>
+      <table>
+        <thead><tr><th>ผู้ซื้อ</th><th>สินค้า</th><th>ราคา</th><th>วันที่</th></tr></thead>
+        <tbody>
+          ${adminOrders.length ? adminOrders.map(o => `
+            <tr><td>${esc(o.user.username)}</td><td>${esc(o.product.title)}</td><td>฿${o.price.toLocaleString()}</td><td>${new Date(o.createdAt).toLocaleString('th-TH')}</td></tr>
+          `).join('') : `<tr class="empty-row"><td colspan="4">ยังไม่มีคำสั่งซื้อ</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ============== HEADER + MAIN RENDER ============== */
+function renderHeaderActions(){
+  const el = document.getElementById('header-actions');
+  if(!me){
+    el.innerHTML = `<a class="pill-btn" onclick="goView('login')">เข้าสู่ระบบ</a><a class="pill-btn gold" onclick="goView('register')">สมัครสมาชิก</a>`;
+  } else {
+    el.innerHTML = `
+      <div class="wallet-chip">฿<b>${me.balance.toLocaleString()}</b></div>
+      <a class="pill-btn" onclick="goView('account')">${esc(me.username)}</a>
+      <a class="pill-btn" onclick="doLogout()">ออกจากระบบ</a>
+    `;
+  }
+  document.getElementById('nav-admin').style.display = (me && me.role === 'admin') ? 'inline' : 'none';
+  document.getElementById('nav-shop').className = view === 'shop' ? 'active' : '';
+  document.getElementById('nav-account').className = view === 'account' ? 'active' : '';
+  document.getElementById('nav-admin').className = view === 'admin' ? 'active' : '';
+  updateConnDot();
+}
+
+function render(){
+  renderHeaderActions();
+  const app = document.getElementById('app');
+  if(view === 'shop') app.innerHTML = renderShop();
+  else if(view === 'login') app.innerHTML = renderLogin();
+  else if(view === 'register') app.innerHTML = renderRegister();
+  else if(view === 'account') app.innerHTML = renderAccount();
+  else if(view === 'admin') app.innerHTML = renderAdmin();
+}
+
+/* ============== INIT ============== */
+(async function init(){
+  document.getElementById('app').innerHTML = `<div style="text-align:center; padding:80px; color:var(--text-dim);">กำลังโหลด...</div>`;
+  await checkConnection();
+  if(apiConnected){
+    await restoreSession();
+    try{ [allProducts, categories] = await Promise.all([apiFetch('/products'), apiFetch('/categories')]); }catch(e){ /* ignore, shown as empty state */ }
+  }
+  render();
+})();
+</script>
+</body>
+</html>
