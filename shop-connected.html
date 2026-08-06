@@ -624,7 +624,10 @@ async function doChangePassword(e){
   const confirmPassword = f.confirmPassword.value;
   if(newPassword !== confirmPassword){ showToast('รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน', 'err'); return; }
   try{
-    await apiFetch('/auth/me/password', { method:'PUT', body: JSON.stringify({ currentPassword, newPassword }) });
+    const result = await apiFetch('/auth/me/password', { method:'PUT', body: JSON.stringify({ currentPassword, newPassword }) });
+    // Backend เพิ่ม tokenVersion ตอนเปลี่ยนรหัสผ่าน ทำให้ token เก่า (รวมถึงอันที่ถืออยู่ตอนนี้) ใช้ไม่ได้แล้ว
+    // ต้องเก็บ token ใหม่ที่ backend ออกมาให้ ไม่งั้นผู้ใช้จะหลุดล็อกอินทันทีหลังกดเปลี่ยนรหัสผ่าน
+    if(result && result.token){ authToken = result.token; saveToken(authToken); }
     showToast('เปลี่ยนรหัสผ่านสำเร็จ', 'ok');
     f.reset();
   }catch(err){ showToast(err.message, 'err'); }
