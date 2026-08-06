@@ -955,7 +955,7 @@ function renderShop(){
         <div class="panel">
           <h3>หมวดหมู่</h3>
           <div class="cat-list">
-            ${cats.map(c => `<a class="${c===selectedCategory?'active':''}" onclick="selectCategory('${esc(c)}')">${esc(c)} <span class="n">${catCount(c)}</span></a>`).join('')}
+            ${cats.map(c => `<a class="${c===selectedCategory?'active':''}" data-cat="${esc(c)}" onclick="selectCategory(this.dataset.cat)">${esc(c)} <span class="n">${catCount(c)}</span></a>`).join('')}
           </div>
         </div>
         <div class="panel">
@@ -1201,7 +1201,7 @@ function renderAdminCategories(){
             <tr>
               <td>${esc(c.name)}</td>
               <td>${allProducts.filter(p => p.category === c.name).length}</td>
-              <td><button class="icon-btn danger" onclick="adminDeleteCategory('${c.id}','${esc(c.name)}')">ลบ</button></td>
+              <td><button class="icon-btn danger" data-name="${esc(c.name)}" onclick="adminDeleteCategory('${c.id}', this.dataset.name)">ลบ</button></td>
             </tr>
           `).join('') : `<tr class="empty-row"><td colspan="3">ยังไม่มีหมวดหมู่</td></tr>`}
         </tbody>
@@ -1311,7 +1311,7 @@ function renderAdminUsers(){
               <td>฿${u.balance.toLocaleString()}</td>
               <td>${new Date(u.createdAt).toLocaleDateString('th-TH')}</td>
               <td><div class="row-actions">
-                <button class="icon-btn" onclick="adminAdjustBalance('${u.id}','${esc(u.username)}')">ปรับยอดเงิน</button>
+                <button class="icon-btn" data-username="${esc(u.username)}" onclick="adminAdjustBalance('${u.id}', this.dataset.username)">ปรับยอดเงิน</button>
                 ${u.username!=='admin' ? `<button class="icon-btn" onclick="adminToggleRole('${u.id}','${u.role}')">${u.role==='admin'?'ถอดสิทธิ์แอดมิน':'ตั้งเป็นแอดมิน'}</button>` : ''}
               </div></td>
             </tr>
