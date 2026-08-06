@@ -63,7 +63,8 @@
   .pill-btn.gold{ background:linear-gradient(135deg,var(--gold-bright),var(--gold)); color:#1a1200; border:none; font-weight:700; box-shadow:var(--shadow-gold); }
   .pill-btn.gold:hover{ background:linear-gradient(135deg,var(--gold-bright),var(--gold-bright)); }
   .wallet-chip{ display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(244,185,60,.10), rgba(139,107,240,.06)); border:1px solid var(--gold-dim);
-    padding:7px 13px; border-radius:8px; font-size:12.5px; }
+    padding:7px 13px; border-radius:8px; font-size:12.5px; cursor:pointer; transition:transform .15s, background .15s; }
+  .wallet-chip:hover{ transform:translateY(-1px); background:linear-gradient(135deg, rgba(244,185,60,.18), rgba(139,107,240,.10)); }
   .wallet-chip b{ color:var(--gold); font-family:'Kanit'; letter-spacing:.2px; }
 
   .conn-dot{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-dim); }
@@ -92,6 +93,10 @@
   .hero-band > *{ position:relative; z-index:1; }
   .hero-band h1{ font-size:25px; font-weight:700; letter-spacing:.1px; }
   .hero-band .sub{ color:var(--text-dim); font-size:13.5px; margin-top:6px; }
+  .hero-stats{ display:flex; gap:26px; }
+  .hero-stats > div{ text-align:center; min-width:64px; }
+  .hero-stats b{ display:block; font-family:'Kanit'; font-size:20px; color:var(--gold); line-height:1.2; }
+  .hero-stats span{ font-size:11px; color:var(--text-dim); }
 
   .layout{ display:grid; grid-template-columns:230px 1fr; gap:26px; }
   aside{ display:flex; flex-direction:column; gap:18px; }
@@ -102,6 +107,19 @@
   .cat-list a:hover{ background:#1b2029; color:var(--text); }
   .cat-list a.active{ background:rgba(244,185,60,0.10); color:var(--gold); font-weight:600; border:1px solid rgba(244,185,60,0.25); }
   .cat-list a .n{ font-size:11px; color:var(--text-faint); }
+
+  .search-input{ width:100%; background:var(--bg-card); border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; color:var(--text); font-size:13px; transition:border-color .15s; }
+  .search-input:focus{ outline:none; border-color:var(--gold-dim); }
+  .price-range-row{ display:flex; align-items:center; gap:8px; }
+  .price-range-row input{ width:100%; min-width:0; background:var(--bg-card); border:1px solid var(--line); border-radius:7px;
+    padding:8px 9px; color:var(--text); font-size:12.5px; }
+  .price-range-row input:focus{ outline:none; border-color:var(--gold-dim); }
+  .price-range-row span{ color:var(--text-faint); font-size:12px; }
+  .sort-select{ background:var(--bg-panel); border:1px solid var(--line); color:var(--text-dim);
+    padding:8px 12px; border-radius:8px; font-size:12.5px; }
+  .low-stock-flag{ position:absolute; top:9px; right:9px; background:rgba(224,87,79,.85); color:#fff;
+    font-size:9.5px; font-weight:700; padding:3px 7px; border-radius:5px; letter-spacing:.2px; }
 
   .grid-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;}
   .grid-head h2{ font-size:18.5px; font-weight:700; }
@@ -347,6 +365,10 @@ let apiConnected = null;
 
 let view = 'shop';
 let selectedCategory = 'ทั้งหมด';
+let searchQuery = '';
+let sortOrder = 'newest'; // 'newest' | 'price_asc' | 'price_desc'
+let priceMin = null;
+let priceMax = null;
 let adminTab = 'products';
 let editingProductId = null;
 let pendingProductImage = undefined; // undefined = no change, null = removed, string = new base64 image
@@ -802,27 +824,61 @@ async function saveApiBase(e){
 /* ============== RENDER: SHOP ============== */
 function renderShop(){
   const cats = ['ทั้งหมด', ...categories.map(c => c.name)];
-  const filtered = selectedCategory === 'ทั้งหมด' ? allProducts : allProducts.filter(p => p.category === selectedCategory);
   const catCount = c => c === 'ทั้งหมด' ? allProducts.length : allProducts.filter(p=>p.category===c).length;
+
+  let filtered = selectedCategory === 'ทั้งหมด' ? allProducts.slice() : allProducts.filter(p => p.category === selectedCategory);
+  if(searchQuery.trim()){
+    const q = searchQuery.trim().toLowerCase();
+    filtered = filtered.filter(p => p.title.toLowerCase().includes(q) || p.specs.some(s => s.toLowerCase().includes(q)));
+  }
+  if(priceMin != null) filtered = filtered.filter(p => p.price >= priceMin);
+  if(priceMax != null) filtered = filtered.filter(p => p.price <= priceMax);
+  if(sortOrder === 'price_asc') filtered.sort((a,b) => a.price - b.price);
+  else if(sortOrder === 'price_desc') filtered.sort((a,b) => b.price - a.price);
+
+  const inStockCount = allProducts.filter(p => p.stock > 0).length;
 
   return `
     ${apiConnected === false ? `<div class="notice warn">เชื่อมต่อ backend ไม่ได้ — ตรวจสอบว่าเซิร์ฟเวอร์รันอยู่ที่ <code>${esc(API_BASE)}</code> แล้วไปที่เมนู "การเชื่อมต่อ" เพื่อแก้ไข URL หากจำเป็น</div>` : ''}
     <div class="breadcrumb">หน้าแรก / สินค้าทั้งหมด / <span class="cur">${esc(selectedCategory)}</span></div>
     <div class="hero-band">
       <div><h1>ร้านไอดีเกม tanabibi</h1><div class="sub">เลือกซื้อไอดีตามหมวดหมู่ ชำระด้วยยอดเงินในกระเป๋าของคุณ</div></div>
+      <div class="hero-stats">
+        <div><b>${allProducts.length}</b><span>สินค้าทั้งหมด</span></div>
+        <div><b>${inStockCount}</b><span>พร้อมขาย</span></div>
+        <div><b>${cats.length - 1}</b><span>หมวดหมู่</span></div>
+      </div>
     </div>
     <div class="layout">
       <aside>
+        <div class="panel">
+          <h3>ค้นหา</h3>
+          <input class="search-input" type="text" placeholder="ค้นหาไอดี, สเปก..." value="${esc(searchQuery)}" oninput="onSearchInput(this.value)">
+        </div>
         <div class="panel">
           <h3>หมวดหมู่</h3>
           <div class="cat-list">
             ${cats.map(c => `<a class="${c===selectedCategory?'active':''}" onclick="selectCategory('${esc(c)}')">${esc(c)} <span class="n">${catCount(c)}</span></a>`).join('')}
           </div>
         </div>
+        <div class="panel">
+          <h3>ช่วงราคา</h3>
+          <div class="price-range-row">
+            <input type="number" min="0" placeholder="ต่ำสุด" value="${priceMin ?? ''}" onchange="onPriceMinChange(this.value)">
+            <span>—</span>
+            <input type="number" min="0" placeholder="สูงสุด" value="${priceMax ?? ''}" onchange="onPriceMaxChange(this.value)">
+          </div>
+          ${(priceMin != null || priceMax != null || searchQuery) ? `<button class="pill-btn" style="width:100%; margin-top:10px;" onclick="clearShopFilters()">ล้างตัวกรอง</button>` : ''}
+        </div>
       </aside>
       <div>
         <div class="grid-head">
           <h2>${esc(selectedCategory)} <span class="count">— พบ ${filtered.length} รายการ</span></h2>
+          <select class="sort-select" onchange="onSortChange(this.value)">
+            <option value="newest" ${sortOrder==='newest'?'selected':''}>ล่าสุด</option>
+            <option value="price_asc" ${sortOrder==='price_asc'?'selected':''}>ราคา: ต่ำ → สูง</option>
+            <option value="price_desc" ${sortOrder==='price_desc'?'selected':''}>ราคา: สูง → ต่ำ</option>
+          </select>
         </div>
         <div class="grid">
           ${filtered.length ? filtered.map(p => `
@@ -830,6 +886,7 @@ function renderShop(){
               <div class="thumb">
                 ${p.imageUrl ? `<img src="${esc(p.imageUrl)}" class="prod-img" alt="${esc(p.title)}">` : `<div class="icon"></div>`}
                 <div class="tag ${p.stock<=0?'sold':''}">${p.stock<=0?'ขายแล้ว':esc(p.category)}</div>
+                ${p.stock>0 && p.stock<=2 ? `<div class="low-stock-flag">เหลือน้อย!</div>` : ''}
                 <div class="stock-flag">${p.stock>0 ? 'เหลือ '+p.stock : 'หมด'}</div>
               </div>
               <div class="card-body">
@@ -841,12 +898,21 @@ function renderShop(){
                 </div>
               </div>
             </div>
-          `).join('') : `<div class="panel" style="grid-column:1/-1; text-align:center; color:var(--text-dim);">ไม่พบสินค้า — ตรวจสอบการเชื่อมต่อ backend หรือยังไม่มีสินค้าในหมวดนี้</div>`}
+          `).join('') : `<div class="panel" style="grid-column:1/-1; text-align:center; color:var(--text-dim);">ไม่พบสินค้าตามตัวกรองนี้</div>`}
         </div>
       </div>
     </div>
   `;
 }
+function onSearchInput(v){ searchQuery = v; render(); focusSearchInput(); }
+function focusSearchInput(){
+  const el = document.querySelector('.search-input');
+  if(el){ el.focus(); const v = el.value; el.value=''; el.value=v; }
+}
+function onSortChange(v){ sortOrder = v; render(); }
+function onPriceMinChange(v){ priceMin = v === '' ? null : Math.max(0, parseInt(v,10)||0); render(); }
+function onPriceMaxChange(v){ priceMax = v === '' ? null : Math.max(0, parseInt(v,10)||0); render(); }
+function clearShopFilters(){ searchQuery=''; priceMin=null; priceMax=null; render(); }
 
 /* ============== RENDER: AUTH ============== */
 function renderLogin(){
@@ -1163,7 +1229,7 @@ function renderHeaderActions(){
     el.innerHTML = `<a class="pill-btn" onclick="goView('login')">เข้าสู่ระบบ</a><a class="pill-btn gold" onclick="goView('register')">สมัครสมาชิก</a>`;
   } else {
     el.innerHTML = `
-      <div class="wallet-chip">฿<b>${me.balance.toLocaleString()}</b></div>
+      <a class="wallet-chip" onclick="goView('account')" title="เติมเงิน">฿<b>${me.balance.toLocaleString()}</b></a>
       <a class="pill-btn" onclick="goView('account')">${esc(me.username)}</a>
       <a class="pill-btn" onclick="doLogout()">ออกจากระบบ</a>
     `;
