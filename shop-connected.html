@@ -417,6 +417,7 @@ let sortOrder = 'newest'; // 'newest' | 'price_asc' | 'price_desc'
 let priceMin = null;
 let priceMax = null;
 let adminTab = 'products';
+let siteSettings = { shopName: 'ร้านไอดีเกม tanabibi', shopDescription: 'เลือกซื้อไอดีตามหมวดหมู่ ชำระด้วยยอดเงินในกระเป๋าของคุณ' };
 let editingProductId = null;
 let pendingProductImage = undefined; // undefined = no change, null = removed, string = new base64 image
 
@@ -580,6 +581,7 @@ async function loadAdminTabData(){
     else if(adminTab === 'users'){ adminUsers = await apiFetch('/admin/users'); }
     else if(adminTab === 'orders'){ adminOrders = await apiFetch('/orders'); }
     else if(adminTab === 'categories'){ [categories, allProducts] = await Promise.all([apiFetch('/categories'), apiFetch('/products')]); }
+    else if(adminTab === 'shop'){ siteSettings = await apiFetch('/settings').catch(()=>siteSettings); }
   }catch(err){ showToast(err.message,'err'); }
 }
 async function setAdminTab(t){ adminTab = t; render(); await loadAdminTabData(); render(); }
@@ -932,7 +934,7 @@ function renderShop(){
     ${apiConnected === false ? `<div class="notice warn">เชื่อมต่อ backend ไม่ได้ — ตรวจสอบว่าเซิร์ฟเวอร์รันอยู่ที่ <code>${esc(API_BASE)}</code> แล้วไปที่เมนู "การเชื่อมต่อ" เพื่อแก้ไข URL หากจำเป็น</div>` : ''}
     <div class="breadcrumb">หน้าแรก / สินค้าทั้งหมด / <span class="cur">${esc(selectedCategory)}</span></div>
     <div class="hero-band">
-      <div><h1>ร้านไอดีเกม tanabibi</h1><div class="sub">เลือกซื้อไอดีตามหมวดหมู่ ชำระด้วยยอดเงินในกระเป๋าของคุณ</div></div>
+      <div><h1>${esc(siteSettings.shopName)}</h1><div class="sub">${esc(siteSettings.shopDescription)}</div></div>
       <div class="hero-stats">
         <div><b>${allProducts.length}</b><span>สินค้าทั้งหมด</span></div>
         <div><b>${inStockCount}</b><span>พร้อมขาย</span></div>
@@ -1046,6 +1048,35 @@ function renderSettings(){
     </div>
   `;
 }
+function renderAdminShopSettings(){
+  return `
+    <div class="form-card" style="margin:0; max-width:480px;">
+      <h2>ตั้งค่าร้านค้า</h2>
+      <div class="sub">ข้อความนี้จะแสดงบนหน้าร้านให้ลูกค้าทุกคนเห็น</div>
+      <form onsubmit="saveShopSettings(event)">
+        <div class="field">
+          <label>ชื่อร้าน (หัวข้อใหญ่)</label>
+          <input name="shopName" value="${esc(siteSettings.shopName)}" placeholder="ร้านไอดีเกม tanabibi" required>
+        </div>
+        <div class="field">
+          <label>คำอธิบายร้าน (คำโปรยใต้หัวข้อ)</label>
+          <textarea name="shopDescription" rows="3" placeholder="เลือกซื้อไอดีตามหมวดหมู่...">${esc(siteSettings.shopDescription)}</textarea>
+        </div>
+        <button class="full-btn" type="submit">บันทึกการเปลี่ยนแปลง</button>
+      </form>
+    </div>
+  `;
+}
+async function saveShopSettings(e){
+  e.preventDefault();
+  const shopName = e.target.shopName.value.trim();
+  const shopDescription = e.target.shopDescription.value.trim();
+  try{
+    siteSettings = await apiFetch('/settings', { method:'PUT', body: JSON.stringify({ shopName, shopDescription }) });
+    showToast('บันทึกการตั้งค่าร้านค้าแล้ว','ok');
+    render();
+  }catch(err){ showToast(err.message,'err'); }
+}
 
 /* ============== RENDER: ACCOUNT (wallet / top-up) ============== */
 function renderAccount(){
@@ -1141,14 +1172,14 @@ function renderProfile(){
 /* ============== RENDER: ADMIN ============== */
 function renderAdmin(){
   if(!me || me.role !== 'admin') return `<div class="panel">ต้องเข้าสู่ระบบด้วยบัญชีแอดมินเพื่อเข้าถึงหน้านี้</div>`;
-  const tabs = [['products','จัดการสินค้า'],['categories','จัดการหมวดหมู่'],['topups','คำขอเติมเงิน'],['users','จัดการสมาชิก'],['orders','คำสั่งซื้อทั้งหมด'],['settings','การเชื่อมต่อ']];
+  const tabs = [['products','จัดการสินค้า'],['categories','จัดการหมวดหมู่'],['topups','คำขอเติมเงิน'],['users','จัดการสมาชิก'],['orders','คำสั่งซื้อทั้งหมด'],['shop','ตั้งค่าร้านค้า'],['settings','การเชื่อมต่อ']];
   return `
     <div class="breadcrumb">หน้าแรก / <span class="cur">หลังบ้าน</span></div>
     <h1 style="font-size:22px; margin-bottom:16px;">แผงควบคุมผู้ดูแลระบบ</h1>
     <div class="tabbar">
       ${tabs.map(([k,l]) => `<button class="${adminTab===k?'active':''}" onclick="setAdminTab('${k}')">${l}</button>`).join('')}
     </div>
-    ${adminTab==='products' ? renderAdminProducts() : adminTab==='categories' ? renderAdminCategories() : adminTab==='topups' ? renderAdminTopups() : adminTab==='users' ? renderAdminUsers() : adminTab==='settings' ? renderSettings() : renderAdminOrders()}
+    ${adminTab==='products' ? renderAdminProducts() : adminTab==='categories' ? renderAdminCategories() : adminTab==='topups' ? renderAdminTopups() : adminTab==='users' ? renderAdminUsers() : adminTab==='shop' ? renderAdminShopSettings() : adminTab==='settings' ? renderSettings() : renderAdminOrders()}
   `;
 }
 
@@ -1347,7 +1378,7 @@ document.getElementById('successModalBackdrop').addEventListener('click', hideSu
   await checkConnection();
   if(apiConnected){
     await restoreSession();
-    try{ [allProducts, categories] = await Promise.all([apiFetch('/products'), apiFetch('/categories')]); }catch(e){ /* ignore, shown as empty state */ }
+    try{ [allProducts, categories, siteSettings] = await Promise.all([apiFetch('/products'), apiFetch('/categories'), apiFetch('/settings')]); }catch(e){ /* ignore, shown as empty state */ }
   }
   render();
 })();
